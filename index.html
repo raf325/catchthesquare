@@ -39,6 +39,8 @@
       background: #22c55e;
       border-radius: 8px;
       cursor: pointer;
+      /* sanfte Bewegung statt sofortem "Teleport" */
+      transition: left 0.25s ease, top 0.25s ease;
     }
     button {
       background: #38bdf8;
@@ -48,8 +50,10 @@
       border-radius: 10px;
       font-size: 16px;
       cursor: pointer;
+      margin: 6px;
     }
     button:hover { opacity: 0.9; }
+    #controls { display:flex; justify-content:center; gap:10px; }
   </style>
 </head>
 <body>
@@ -57,18 +61,26 @@
     <h1>🎯 Catch the Square</h1>
     <p>Punkte: <span id="score">0</span></p>
     <div id="field">
-      <div id="square"></div>
+      <div id="square" style="display:none;"></div>
     </div>
-    <button onclick="startGame()">Spiel starten</button>
+    <div id="controls">
+      <button id="startBtn">Spiel starten</button>
+      <button id="stopBtn">Stopp</button>
+    </div>
   </div>
 
   <script>
     const field = document.getElementById('field');
     const square = document.getElementById('square');
     const scoreEl = document.getElementById('score');
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
 
     let score = 0;
-    let interval;
+    let interval = null;
+    let gameStarted = false;
+    // Geschwindigkeit der automatischen Bewegung (ms)
+    const speed = 1000;
 
     function randomPosition() {
       const maxX = field.clientWidth - square.clientWidth;
@@ -79,19 +91,66 @@
       square.style.top = y + 'px';
     }
 
-    square.addEventListener('click', () => {
+    // Klick nur zulassen, wenn das Spiel gestartet ist
+    square.addEventListener('click', (e) => {
+      if (!gameStarted) return; // ignorieren bevor gestartet
+
       score++;
       scoreEl.textContent = score;
+
+      // Sofort an neue Position setzen (einmal)
       randomPosition();
+
+      // WICHTIG: den Intervall zurücksetzen, damit er nicht kurz danach
+      // nochmal auslöst und das Feld erneut verschiebt.
+      if (interval) clearInterval(interval);
+      // Starte den Intervall erneut so, dass der nächste automatische Move
+      // erst nach 'speed' Millisekunden passiert.
+      interval = setInterval(randomPosition, speed);
+
+      // Verhindere, dass das Klick-Event die Fokus- oder Textauswahl stört
+      e.stopPropagation();
     });
 
     function startGame() {
       score = 0;
       scoreEl.textContent = score;
+      gameStarted = true;
+      square.style.display = 'block';
+
+      // Position initial setzen
       randomPosition();
-      clearInterval(interval);
-      interval = setInterval(randomPosition, 1000);
+
+      // Falls bereits ein Intervall lief, zurücksetzen
+      if (interval) clearInterval(interval);
+      interval = setInterval(randomPosition, speed);
+
+      // Button-Status
+      startBtn.disabled = true;
+      stopBtn.disabled = false;
     }
+
+    function stopGame() {
+      gameStarted = false;
+      // Stoppe Bewegungen
+      if (interval) { clearInterval(interval); interval = null; }
+      // Verstecke das Quadrat bis zum nächsten Start
+      square.style.display = 'none';
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+    }
+
+    // Buttons verbinden
+    startBtn.addEventListener('click', startGame);
+    stopBtn.addEventListener('click', stopGame);
+
+    // Initial: Spiel gestoppt
+    stopBtn.disabled = true;
+
+    // Optional: wenn Fenstergröße sich ändert, Position neu berechnen
+    window.addEventListener('resize', () => {
+      if (gameStarted) randomPosition();
+    });
   </script>
 </body>
 </html>
