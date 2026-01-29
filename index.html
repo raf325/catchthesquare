@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Catch the Square</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: #e5e7eb;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .game {
+      background: #020617;
+      padding: 20px;
+      border-radius: 16px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+      text-align: center;
+    }
+    #field {
+      position: relative;
+      width: 300px;
+      height: 300px;
+      background: #020617;
+      border: 2px solid #38bdf8;
+      border-radius: 12px;
+      margin: 20px auto;
+      overflow: hidden;
+    }
+    #square {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      background: #22c55e;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button {
+      background: #38bdf8;
+      color: #020617;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    button:hover { opacity: 0.9; }
+  </style>
+</head>
+<body>
+  <div class="game">
+    <h1>🎯 Catch the Square</h1>
+    <p>Punkte: <span id="score">0</span></p>
+    <div id="field">
+      <div id="square"></div>
+    </div>
+    <button onclick="startGame()">Spiel starten</button>
+  </div>
+
+  <script>
+    const field = document.getElementById('field');
+    const square = document.getElementById('square');
+    const scoreEl = document.getElementById('score');
+
+    let score = 0;
+    let interval;
+
+    function randomPosition() {
+      const maxX = field.clientWidth - square.clientWidth;
+      const maxY = field.clientHeight - square.clientHeight;
+      const x = Math.random() * maxX;
+      const y = Math.random() * maxY;
+      square.style.left = x + 'px';
+      square.style.top = y + 'px';
+    }
+
+    square.addEventListener('click', () => {
+      score++;
+      scoreEl.textContent = score;
+      randomPosition();
+    });
+
+    function startGame() {
+      score = 0;
+      scoreEl.textContent = score;
+      randomPosition();
+      clearInterval(interval);
+      interval = setInterval(randomPosition, 1000);
+    }
+  </script>
+</body>
+</html>
