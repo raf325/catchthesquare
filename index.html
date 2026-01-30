@@ -1,243 +1,195 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <title>Catch the Square – Online Leaderboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Catch the Square - Mit Firebase Leaderboard</title>
   <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: radial-gradient(circle at top, #0f172a, #020617);
-      color: #e5e7eb;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-    }
+    :root{--bg1:#0f172a;--bg2:#061226;--accent:#38bdf8;--green:#22c55e;--bomb:#ef4444}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:Inter,Arial,system-ui;background:radial-gradient(1200px 600px at 10% 10%, rgba(56,189,248,0.06), transparent),linear-gradient(180deg,var(--bg1),var(--bg2));color:#e6eef8}
+    .bg-dots{position:fixed;inset:0;pointer-events:none;z-index:0;background-image:radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px);background-size:40px 40px;opacity:0.6;transform:translateZ(0);animation:drift 12s linear infinite}
+    @keyframes drift{from{transform:translateY(0)}to{transform:translateY(-30px)}}
+    .game{position:relative;z-index:1;background:linear-gradient(180deg, rgba(2,6,23,0.9), rgba(2,6,23,0.75));padding:20px;border-radius:14px;box-shadow:0 10px 30px rgba(2,6,23,0.6);width:760px;display:grid;grid-template-columns:1fr 320px;gap:20px}
+    h1{margin:0 0 8px 0;font-size:20px}
+    #left{padding:8px}
+    #status{display:flex;justify-content:space-between;gap:10px;margin-bottom:12px}
+    #field{position:relative;width:320px;height:320px;background:linear-gradient(135deg, rgba(255,255,255,0.02), rgba(0,0,0,0.06));border-radius:10px;border:1px solid rgba(56,189,248,0.12);overflow:hidden;margin:0 auto}
+    .target,.bomb{position:absolute;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+    .target{background:var(--green);width:44px;height:44px;transition:left .22s ease,top .22s ease,width .18s ease,height .18s ease,transform .12s ease}
+    .target:active{transform:scale(.95)}
+    .bomb{background:var(--bomb);width:40px;height:40px;transition:left .6s ease,top .6s ease,transform .12s ease}
+    .explosion{position:absolute;pointer-events:none;border-radius:50%;transform:translate(-50%,-50%);opacity:1;mix-blend-mode:screen;filter:drop-shadow(0 6px 10px rgba(0,0,0,.45));}
+    .particle{position:absolute;border-radius:50%;pointer-events:none;will-change:transform,opacity}
+    #controls{display:flex;justify-content:flex-start;gap:10px;margin-top:12px}
+    button{background:var(--accent);color:#04202b;border:none;padding:8px 12px;border-radius:8px;font-weight:600;cursor:pointer}
+    button:disabled{opacity:.5;cursor:default}
+    #hud{display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:13px;color:#cfeeff}
+    .pill{background:rgba(255,255,255,0.02);padding:6px 8px;border-radius:8px}
 
-    .game {
-      background: #020617cc;
-      padding: 20px;
-      border-radius: 12px;
-      width: 360px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
-    }
-
-    h1 { margin-top: 0; }
-
-    #status {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 10px;
-      font-size: 14px;
-    }
-
-    #field {
-      position: relative;
-      width: 320px;
-      height: 320px;
-      background: #020617;
-      border: 1px solid #38bdf8;
-      border-radius: 10px;
-      margin: auto;
-      overflow: hidden;
-    }
-
-    .target {
-      position: absolute;
-      background: #22c55e;
-      width: 44px;
-      height: 44px;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: left .2s, top .2s;
-    }
-
-    .bomb {
-      position: absolute;
-      background: #ef4444;
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      cursor: pointer;
-      transition: left .6s, top .6s;
-    }
-
-    button {
-      width: 100%;
-      margin-top: 10px;
-      padding: 10px;
-      background: #38bdf8;
-      border: none;
-      border-radius: 8px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-
-    input {
-      width: 100%;
-      padding: 8px;
-      margin-top: 6px;
-      border-radius: 6px;
-      border: none;
-    }
-
-    ol {
-      padding-left: 20px;
-    }
+    /* Right column: leaderboard */
+    #right{padding:8px}
+    #leaderboard{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.03));padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.03)}
+    #leaderboard h3{margin:0 0 8px 0}
+    .entry{display:flex;justify-content:space-between;padding:6px 8px;border-radius:6px;margin-bottom:6px;background:rgba(255,255,255,0.01)}
+    #submitScore{display:flex;gap:8px;margin-top:8px}
+    input[type=text]{flex:1;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit}
+    small.note{display:block;margin-top:8px;color:#9fc9e6}
   </style>
 </head>
 <body>
+  <div class="bg-dots"></div>
+  <div class="game">
+    <div id="left">
+      <h1>🎯 Catch the Square</h1>
+      <div id="status">
+        <div>Punkte: <strong><span id="score">0</span></strong></div>
+        <div>Zeit: <strong><span id="timer">30</span>s</strong></div>
+        <div>Level: <strong><span id="level">1</span></strong></div>
+      </div>
+      <div id="field">
+        <div id="square" class="target" style="display:none"></div>
+      </div>
 
-<div class="game">
-  <h1>🎯 Catch the Square</h1>
+      <div id="controls">
+        <button id="startBtn">Spiel starten</button>
+        <button id="stopBtn">Stopp</button>
+      </div>
 
-  <div id="status">
-    <div>Punkte: <b id="score">0</b></div>
-    <div>Zeit: <b id="time">30</b>s</div>
-    <div>Level: <b id="level">1</b></div>
+      <div id="hud">
+        <div class="pill">Combo: <span id="combo">0</span></div>
+        <div class="pill">Bomben: <span id="bombCount">0</span></div>
+      </div>
+    </div>
+
+    <div id="right">
+      <div id="leaderboard">
+        <h3>Online Leaderboard (Top 10)</h3>
+        <div id="entries">Lade...</div>
+        <div id="submitScore">
+          <input id="playerName" type="text" placeholder="Dein Name (max 12)" maxlength="12" />
+          <button id="saveBtn">Score speichern</button>
+        </div>
+        <small class="note">Damit das Online-Board funktioniert, musst du dein Firebase-Konfigurationsobjekt unten eintragen (siehe Kommentar im Code). Für Testzwecke kannst du die Regeln offen lassen, aber für Produktivbetrieb solltest du Authentifizierung / Regeln einstellen.</small>
+      </div>
+    </div>
   </div>
 
-  <div id="field">
-    <div id="square" class="target" style="display:none"></div>
-  </div>
+  <!-- Firebase SDK + Leaderboard-Integration -->
+  <script type="module">
+    // --- WICHTIG ---
+    // 1) Lege in der Firebase Console ein Projekt an.
+    // 2) Aktiviere Cloud Firestore (im Testmodus zum einfachen Starten).
+    // 3) Kopiere hier dein firebaseConfig (apiKey, authDomain, projectId, ...)
+    //    ersetze das leere Objekt weiter unten.
+    // 4) Hoste die Seite per HTTPS (z.B. GitHub Pages, Vercel, Netlify) oder teste lokal mit einem kleinen Server.
 
-  <button id="startBtn">Spiel starten</button>
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js';
+    import { getFirestore, collection, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js';
 
-  <div id="gameOver" style="display:none">
-    <h3>🏁 Game Over</h3>
-    <input id="playerName" placeholder="Dein Name">
-    <button id="saveScore">Score speichern</button>
-  </div>
+    // --- TRAGE HIER DEIN FIREBASE CONFIG OBJEKT EIN ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyA90J97sqt1oMnYfojDEVCKgVBkN_3Ilmc",
+      authDomain: "chasethesquare.firebaseapp.com",
+      projectId: "chasethesquare",
+      storageBucket: "chasethesquare.firebasestorage.app",
+      messagingSenderId: "730109083472",
+      appId: "1:730109083472:web:f52ccc4f46459e6609f655"
+    };
 
-  <h3>🏆 Leaderboard</h3>
-  <ol id="leaderboard"></ol>
-</div>
+    let db = null; // Firestore instance
+    let unsubscribeLeaderboard = null; // listener
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-  import {
-    getFirestore, collection, addDoc,
-    query, orderBy, limit, onSnapshot, serverTimestamp
-  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-  // 🔑 Firebase Config (dein Projekt)
-  const firebaseConfig = {
-    apiKey: "AIzaSyA90J97sqt1oMnYfojDEVCKgVBkN_3Ilmc",
-    authDomain: "chasethesquare.firebaseapp.com",
-    projectId: "chasethesquare",
-    storageBucket: "chasethesquare.firebasestorage.app",
-    messagingSenderId: "730109083472",
-    appId: "1:730109083472:web:f52ccc4f46459e6609f655"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-
-  // DOM
-  const field = document.getElementById("field");
-  const square = document.getElementById("square");
-  const scoreEl = document.getElementById("score");
-  const timeEl = document.getElementById("time");
-  const levelEl = document.getElementById("level");
-  const leaderboardEl = document.getElementById("leaderboard");
-
-  let score = 0, time = 30, level = 1;
-  let speed = 1000;
-  let gameInterval, timerInterval;
-  let bombs = [];
-
-  function randomPos(el) {
-    el.style.left = Math.random() * (320 - el.offsetWidth) + "px";
-    el.style.top = Math.random() * (320 - el.offsetHeight) + "px";
-  }
-
-  function placeSquare(resetCombo = false) {
-    randomPos(square);
-    clearInterval(gameInterval);
-    gameInterval = setInterval(() => placeSquare(true), speed);
-  }
-
-  function createBombs() {
-    bombs.forEach(b => b.remove());
-    bombs = [];
-    for (let i = 0; i < 3; i++) {
-      const b = document.createElement("div");
-      b.className = "bomb";
-      randomPos(b);
-      b.onclick = () => {
-        score = Math.max(0, score - 5);
-        scoreEl.textContent = score;
-      };
-      field.appendChild(b);
-      bombs.push(b);
+    function initFirebaseIfNeeded() {
+      if (!firebaseConfig || !firebaseConfig.projectId) return false;
+      try {
+        initializeApp(firebaseConfig);
+        db = getFirestore();
+        console.log('Firebase initialisiert');
+        return true;
+      } catch (e) {
+        console.error('Firebase Init Error', e);
+        return false;
+      }
     }
-    setInterval(() => bombs.forEach(b => randomPos(b)), 2000);
-  }
 
-  square.onclick = () => {
-    score++;
-    scoreEl.textContent = score;
-    if (score % 10 === 0) {
-      level++;
-      levelEl.textContent = level;
-      speed = Math.max(300, speed - 100);
+    // DOM refs
+    const field = document.getElementById('field');
+    const square = document.getElementById('square');
+    const scoreEl = document.getElementById('score');
+    const timerEl = document.getElementById('timer');
+    const levelEl = document.getElementById('level');
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const comboEl = document.getElementById('combo');
+    const bombCountEl = document.getElementById('bombCount');
+    const entriesEl = document.getElementById('entries');
+    const playerNameInput = document.getElementById('playerName');
+    const saveBtn = document.getElementById('saveBtn');
+
+    // Game state
+    let score = 0, timeLeft = 30, gameStarted = false; let squareSpeed = 1000, comboCount = 0;
+    let interval = null, obstaclesInterval = null, countdown = null; const obstacles = []; const maxObstacles = 3; const obstaclesMoveSpeed = 2000;
+
+    function randomPosition(element) {
+      const maxX = field.clientWidth - element.offsetWidth;
+      const maxY = field.clientHeight - element.offsetHeight;
+      const x = Math.random() * maxX; const y = Math.random() * maxY;
+      element.style.left = x + 'px'; element.style.top = y + 'px';
     }
-    placeSquare();
-  };
 
-  document.getElementById("startBtn").onclick = () => {
-    score = 0; time = 30; level = 1; speed = 1000;
-    scoreEl.textContent = 0;
-    timeEl.textContent = 30;
-    levelEl.textContent = 1;
-    square.style.display = "block";
-    document.getElementById("gameOver").style.display = "none";
-    placeSquare();
-    createBombs();
+    function createObstacles() {
+      obstacles.forEach(o => field.removeChild(o)); obstacles.length = 0;
+      for (let i=0;i<maxObstacles;i++){
+        const bomb = document.createElement('div'); bomb.className='bomb'; randomPosition(bomb); field.appendChild(bomb); obstacles.push(bomb);
+        bomb.addEventListener('click',(e)=>{ if(!gameStarted) return; e.stopPropagation(); const rect = bomb.getBoundingClientRect(); const fxX = rect.left + rect.width/2 - field.getBoundingClientRect().left; const fxY = rect.top + rect.height/2 - field.getBoundingClientRect().top; explodeBomb(fxX,fxY); score = Math.max(0, score - 4); scoreEl.textContent = score; comboCount = 0; comboEl.textContent = comboCount; updateLevelDisplay(); setTimeout(()=>{ if(field.contains(bomb)) randomPosition(bomb); },700); });
+      }
+      bombCountEl.textContent = obstacles.length;
+      if(obstaclesInterval) clearInterval(obstaclesInterval);
+      obstaclesInterval = setInterval(()=>{obstacles.forEach(b=>randomPosition(b))}, obstaclesMoveSpeed);
+    }
 
-    timerInterval = setInterval(() => {
-      time--;
-      timeEl.textContent = time;
-      if (time <= 0) endGame();
-    }, 1000);
-  };
+    function updateLevelDisplay(){ const lvl = Math.floor(score/10)+1; levelEl.textContent = lvl; }
 
-  function endGame() {
-    clearInterval(timerInterval);
-    clearInterval(gameInterval);
-    square.style.display = "none";
-    bombs.forEach(b => b.remove());
-    document.getElementById("gameOver").style.display = "block";
-  }
+    function burstParticles(x,y,color='#9ef0b6',count=10){ const frag = document.createDocumentFragment(); for(let i=0;i<count;i++){ const p = document.createElement('div'); p.className='particle'; const size = 6 + Math.random()*10; p.style.width = size+'px'; p.style.height = size+'px'; p.style.background = color; p.style.left = x+'px'; p.style.top = y+'px'; p.style.opacity = '1'; p.style.transform = 'translate(-50%,-50%) scale(1)'; field.appendChild(p); const angle = Math.random()*Math.PI*2; const speed = 40 + Math.random()*80; const dx = Math.cos(angle)*speed; const dy = Math.sin(angle)*speed; requestAnimationFrame(()=>{ p.style.transition = 'transform 600ms cubic-bezier(.18,.89,.32,1), opacity 600ms linear'; p.style.transform = `translate(${dx}px,${dy}px) scale(0.2)`; p.style.opacity = '0'; }); setTimeout(()=>{ if(field.contains(p)) field.removeChild(p); },700); } }
 
-  document.getElementById("saveScore").onclick = async () => {
-    const name = document.getElementById("playerName").value || "Player";
-    await addDoc(collection(db, "leaderboard"), {
-      name,
-      score,
-      createdAt: serverTimestamp()
+    function explodeBomb(x,y){ const el = document.createElement('div'); el.className='explosion'; el.style.left = x+'px'; el.style.top = y+'px'; el.style.width='20px'; el.style.height='20px'; el.style.background='radial-gradient(circle at 30% 30%, rgba(255,200,80,0.9), rgba(255,120,33,0.6) 30%, rgba(255,60,60,0.2) 60%, transparent 70%)'; field.appendChild(el); requestAnimationFrame(()=>{ el.style.transition='width 420ms ease-out,height 420ms ease-out,opacity 420ms ease-out'; el.style.width='200px'; el.style.height='200px'; el.style.opacity='0'; el.style.marginLeft='-100px'; el.style.marginTop='-100px'; }); burstParticles(x,y,'#ffb86b',18); setTimeout(()=>{ if(field.contains(el)) field.removeChild(el); },450); }
+
+    function placeSquare(isAuto=false){ if(isAuto){ comboCount=0; comboEl.textContent = comboCount; } randomPosition(square); if(interval) clearInterval(interval); interval = setInterval(()=>placeSquare(true), squareSpeed); }
+
+    square.addEventListener('click',(e)=>{ if(!gameStarted) return; e.stopPropagation(); const rect = square.getBoundingClientRect(); const fxX = rect.left + rect.width/2 - field.getBoundingClientRect().left; const fxY = rect.top + rect.height/2 - field.getBoundingClientRect().top; comboCount++; comboEl.textContent = comboCount; const points = comboCount>1?1+comboCount:1; score+=points; scoreEl.textContent = score; updateLevelDisplay(); square.style.transform='scale(0.92)'; setTimeout(()=>square.style.transform='scale(1)',80); burstParticles(fxX,fxY,'#b8ffd0',12); if(score%10===0 && squareSpeed>300){ squareSpeed-=100; const newW = Math.max(20, square.offsetWidth-5); const newH = Math.max(20, square.offsetHeight-5); square.style.width=newW+'px'; square.style.height=newH+'px'; if(interval){ clearInterval(interval); interval=setInterval(()=>placeSquare(true),squareSpeed); } } placeSquare(false); });
+
+    function startGame(){ score=0; scoreEl.textContent=score; timeLeft=30; timerEl.textContent=timeLeft; gameStarted=true; comboCount=0; comboEl.textContent=0; squareSpeed=1000; square.style.width='44px'; square.style.height='44px'; square.style.display='block'; placeSquare(false); createObstacles(); if(countdown) clearInterval(countdown); countdown=setInterval(()=>{ timeLeft--; timerEl.textContent=timeLeft; if(timeLeft<=0){ stopGame(); showSavePrompt(); } },1000); startBtn.disabled=true; stopBtn.disabled=false; }
+
+    function stopGame(){ gameStarted=false; if(interval){ clearInterval(interval); interval=null; } if(obstaclesInterval){ clearInterval(obstaclesInterval); obstaclesInterval=null; } if(countdown){ clearInterval(countdown); countdown=null; } square.style.display='none'; obstacles.forEach(o=>{ if(field.contains(o)) field.removeChild(o); }); obstacles.length=0; bombCountEl.textContent=0; startBtn.disabled=false; stopBtn.disabled=true; }
+
+    // --- Leaderboard functions ---
+    async function submitScoreToFirestore(name, pts){ if(!db) return alert('Firebase ist nicht konfiguriert. Bitte firebaseConfig im Code ergänzen.'); if(!name) name='Anonym'; try{ await addDoc(collection(db,'leaderboard'), { name, score: pts, createdAt: serverTimestamp() }); }catch(e){ console.error('Speichern fehlgeschlagen',e); alert('Speichern fehlgeschlagen. Konsole prüfen.'); } }
+
+    function showSavePrompt(){ // enable save button; user can enter name and press speichern
+      // focus name input
+      playerNameInput.focus();
+    }
+
+    function renderEntries(docs){ if(!docs) return; entriesEl.innerHTML=''; docs.forEach((d,idx)=>{ const data = d.data(); const el = document.createElement('div'); el.className='entry'; el.innerHTML = `<div>${idx+1}. ${escapeHtml(data.name||'Anonym')}</div><div>${data.score}</div>`; entriesEl.appendChild(el); }); }
+
+    function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    // initialize Firebase and start listening to leaderboard (top 10)
+    function startLeaderboardRealtime(){ if(!initFirebaseIfNeeded()) { entriesEl.textContent='Firebase nicht konfiguriert. Leaderboard offline.'; return; } const q = query(collection(db,'leaderboard'), orderBy('score','desc'), limit(10)); if(unsubscribeLeaderboard) unsubscribeLeaderboard(); unsubscribeLeaderboard = onSnapshot(q, snapshot => { renderEntries(snapshot.docs); }); }
+
+    // non-realtime fallback: load once
+    async function loadLeaderboardOnce(){ if(!initFirebaseIfNeeded()) { entriesEl.textContent='Firebase nicht konfiguriert. Leaderboard offline.'; return; } const q = query(collection(db,'leaderboard'), orderBy('score','desc'), limit(10)); const snap = await getDocs(q); renderEntries(snap.docs); }
+
+    // wire save button
+    saveBtn.addEventListener('click', async ()=>{ const name = playerNameInput.value.trim().substring(0,12); if(!initFirebaseIfNeeded()){ alert('Firebase nicht konfiguriert. Bitte firebaseConfig im Code ergänzen.'); return; } await submitScoreToFirestore(name, score); playerNameInput.value=''; // leaderboard aktualisiert automatisch durch listener
     });
-    document.getElementById("playerName").value = "";
-  };
 
-  const q = query(
-    collection(db, "leaderboard"),
-    orderBy("score", "desc"),
-    limit(10)
-  );
+    // try to start realtime listener on load (will show offline msg if not configured)
+    startLeaderboardRealtime();
 
-  onSnapshot(q, snap => {
-    leaderboardEl.innerHTML = "";
-    snap.forEach(doc => {
-      const d = doc.data();
-      const li = document.createElement("li");
-      li.textContent = `${d.name}: ${d.score}`;
-      leaderboardEl.appendChild(li);
-    });
-  });
-</script>
-
+    // init listeners for game buttons
+    startBtn.addEventListener('click',startGame); stopBtn.addEventListener('click',stopGame); stopBtn.disabled=true; window.addEventListener('resize',()=>{ if(gameStarted) placeSquare(true); });
+  </script>
 </body>
 </html>
